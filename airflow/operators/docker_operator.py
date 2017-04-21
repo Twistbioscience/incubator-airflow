@@ -40,6 +40,8 @@ class DockerOperator(BaseOperator):
         This value gets multiplied with 1024. See
         https://docs.docker.com/engine/reference/run/#cpu-share-constraint
     :type cpus: float
+    :param docker_registry_conn_id: Reference to credentials to use for registry authentication
+    :type docker_registry_conn_id: str
     :param docker_url: URL of the host running the docker daemon.
     :type docker_url: str
     :param environment: Environment variables to set in the container.
@@ -87,6 +89,7 @@ class DockerOperator(BaseOperator):
             command=None,
             cpus=1.0,
             docker_url='unix://var/run/docker.sock',
+            docker_registry_conn_id=None,
             environment=None,
             force_pull=False,
             mem_limit=None,
@@ -144,6 +147,11 @@ class DockerOperator(BaseOperator):
 
         self.cli = Client(base_url=self.docker_url, version=self.api_version, tls=tls_config)
 
+        if self.docker_registry_conn_id:
+            from airflow.contrib.hooks.docker_registry_hook import DockerRegistryHook
+            docker_registry_hook = DockerRegistryHook(self.docker_registry_conn_id)
+            docker_registry_hook.login(self.cli)
+            
         if ':' not in self.image:
             image = self.image + ':latest'
         else:

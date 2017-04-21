@@ -155,6 +155,22 @@ class DockerOperatorTestCase(unittest.TestCase):
 
         client_mock.stop.assert_called_with('some_id')
 
+    @unittest.skipIf(mock is None, 'mock package not present')
+    @mock.patch('airflow.contrib.hooks.docker_registry_hook.DockerRegistryHook')
+    @mock.patch('airflow.operators.docker_operator.Client')
+    def test_registry_auth(self, client_class_mock, registry_hook_mock):
+        client_mock = mock.Mock(spec=Client)
+        client_mock.login.return_value = {u'IdentityToken': u'', u'Status': u'Login Succeeded'}
+
+        client_class_mock.return_value = client_mock
+
+        operator = DockerOperator(image='ubuntu', owner='unittest', task_id='unittest',
+                                  docker_registry_conn_id='registry_test_credentials')
+        operator.execute()
+
+        client_mock.login.assert_called_with({'username': 'test_user',
+                                              'password': 'test_password'})
+
 
 if __name__ == "__main__":
     unittest.main()
